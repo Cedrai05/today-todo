@@ -2,14 +2,14 @@
   const toggle = document.querySelector('#time-24-hour');
   toggle.checked = localStorage.getItem('todo-time-24') !== 'false';
   function update() {
-    document.querySelectorAll('input[type="time"], input[type="datetime-local"], input[data-time-input]').forEach((input) => {
+    // Keep the native calendar available for deadlines in either time format.
+    document.querySelectorAll('input[type="time"], input[data-time-input="time"]').forEach((input) => {
       if (!input.dataset.timeInput) input.dataset.timeInput = input.type;
-      const dateTime = input.dataset.timeInput === 'datetime-local';
       input.type = toggle.checked ? 'text' : input.dataset.timeInput;
       if (toggle.checked) {
-        input.placeholder = dateTime ? 'YYYY-MM-DDTHH:MM' : 'HH:MM'; input.inputMode = dateTime ? 'text' : 'numeric';
-        input.pattern = (dateTime ? '[0-9]{4}-[0-9]{2}-[0-9]{2}T' : '') + '([01][0-9]|2[0-3]):[0-5][0-9]';
-        input.maxLength = dateTime ? 16 : 5;
+        input.placeholder = 'HH:MM'; input.inputMode = 'numeric';
+        input.pattern = '([01][0-9]|2[0-3]):[0-5][0-9]';
+        input.maxLength = 5;
       } else { input.removeAttribute('pattern'); input.removeAttribute('maxlength'); }
     });
   }
