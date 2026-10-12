@@ -6,6 +6,11 @@
   const dateKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const timestamp = (task) => task.deadline && Number.isFinite(Date.parse(task.deadline)) ? Date.parse(task.deadline) : Infinity;
   const dueToday = (task, now = new Date()) => Number.isFinite(timestamp(task)) && dateKey(new Date(timestamp(task))) === dateKey(now);
+  function normalizeTime(value) {
+    const match = /^(\d{2}):?(\d{2})$/.exec(value.trim());
+    if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) return null;
+    return `${match[1]}:${match[2]}`;
+  }
   function inputValue(task) {
     if (!Number.isFinite(timestamp(task))) return '';
     const date = new Date(timestamp(task));
@@ -23,5 +28,5 @@
   function remaining(tasks, now = new Date()) {
     return tasks.filter((task) => !task.done && (task.date === dateKey(now) || dueToday(task, now))).sort((a, b) => Number(dueToday(b, now)) - Number(dueToday(a, now)) || timestamp(a) - timestamp(b) || a.createdAt - b.createdAt);
   }
-  return { timestamp, dueToday, inputValue, describe, upcoming, remaining };
+  return { timestamp, dueToday, normalizeTime, inputValue, describe, upcoming, remaining };
 });

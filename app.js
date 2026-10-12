@@ -617,7 +617,10 @@
     $('#task-title').value = task?.title ?? '';
     $('#task-note').value = task?.note ?? '';
     $('#task-date').value = task?.date ?? selectedDate;
-    $('#task-deadline').value = window.TodoDeadline.inputValue(task || {});
+    const [deadlineDate = '', deadlineTime = ''] = window.TodoDeadline.inputValue(task || {}).split('T');
+    $('#task-deadline').value = deadlineDate;
+    $('#task-deadline-time').value = deadlineTime;
+    validateDeadlineInputs();
     $('#task-priority').value = task?.priority ?? 'normal';
     $('#task-placement').value = task?.placement || 'auto';
     window.TodoPlanner.fillCategories($('#task-category'), task?.categoryId || '');
@@ -626,10 +629,20 @@
     dialog.showModal(); setTimeout(() => $('#task-title').focus(), 50);
   }
   function closeDialog() { dialog.close(); editingId = null; }
+  function validateDeadlineInputs() {
+    const date = $('#task-deadline');
+    const time = $('#task-deadline-time');
+    date.required = Boolean(time.value.trim());
+    time.required = Boolean(date.value);
+    time.setCustomValidity(time.value.trim() && !window.TodoDeadline.normalizeTime(time.value) ? '0000~2359 사이의 시간을 입력해 주세요. 예: 1500 또는 15:00' : '');
+  }
   function saveTask(event) {
     event.preventDefault();
     const title = $('#task-title').value.trim(); if (!title) return;
-    const deadline = $('#task-deadline').value;
+    validateDeadlineInputs();
+    if (!$('#task-form').reportValidity()) return;
+    const deadlineTime = window.TodoDeadline.normalizeTime($('#task-deadline-time').value);
+    const deadline = $('#task-deadline').value ? `${$('#task-deadline').value}T${deadlineTime}` : '';
     if (deadline && !Number.isFinite(new Date(deadline).getTime())) return;
     const values = { title, note: $('#task-note').value.trim(), date: $('#task-date').value, deadline: deadline ? new Date(deadline).toISOString() : null, priority: $('#task-priority').value, categoryId: $('#task-category').value, placement: $('#task-placement').value, planId: $('#task-plan').value || null };
     let changedTask;
@@ -845,7 +858,18 @@
       render();
     } else showToday();
   });
-  $('#clear-task-deadline').addEventListener('click', () => { $('#task-deadline').value = ''; });
+  $('#task-deadline').addEventListener('input', validateDeadlineInputs);
+  $('#task-deadline-time').addEventListener('input', validateDeadlineInputs);
+  $('#task-deadline-time').addEventListener('blur', () => {
+    const time = window.TodoDeadline.normalizeTime($('#task-deadline-time').value);
+    if (time) $('#task-deadline-time').value = time;
+    validateDeadlineInputs();
+  });
+  $('#clear-task-deadline').addEventListener('click', () => {
+    $('#task-deadline').value = '';
+    $('#task-deadline-time').value = '';
+    validateDeadlineInputs();
+  });
   $('#search-input').addEventListener('input', renderTaskList);
   $('#day-filters').addEventListener('change', (event) => {
     const group = event.target.dataset.dayFilter;
