@@ -98,7 +98,7 @@
       const start = minutes(value);
       if (!Number.isFinite(start) || start >= 1440) return [];
       const sub = routine.subtask ? task.subtasks?.find((item) => item.routineId === routine.id) : null;
-      return [{ id: `point-${task.id}`, routineId: routine.id, taskId: task.id, occurrenceDate: task.routineDate || date, title: sub?.title || task.title, categoryId: task.categoryId || routine.categoryId || '', time: value, start, end: Math.min(1440, start + 15), done: routine.subtask ? Boolean(sub?.done) : Boolean(task.done) }];
+      return [{ id: `point-${task.id}`, routineId: routine.id, taskId: task.id, occurrenceDate: task.routineDate || date, title: sub?.title || task.title, categoryId: task.categoryId || routine.categoryId || '', time: value, skipped: Boolean(task.skipped), start, end: Math.min(1440, start + 15), done: routine.subtask ? Boolean(sub?.done) : Boolean(task.done) }];
     });
   }
 

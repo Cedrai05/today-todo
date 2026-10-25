@@ -30,3 +30,12 @@ test('local input round-trips absolute timestamps and detects midnight by local 
   assert.match(core.describe(item,now),/기한 지남/);assert.match(core.describe({...item,done:true},now),/00:30/);assert.doesNotMatch(core.describe({...item,done:true},now),/기한 지남/);
   assert.equal(core.inputValue({deadline:'invalid'}),'');assert.equal(core.dueToday({deadline:null},now),false);
 });
+
+test('skipped routine occurrences are excluded from reminders and upcoming deadlines', () => {
+  const skipped = { ...task('routine', '2026-10-14', '2026-10-14T20:00:00+09:00'), routineId: 'walk', skipped: true };
+  const regular = task('regular', '2026-10-14', '2026-10-14T21:00:00+09:00');
+  assert.deepEqual(core.remaining([skipped, regular], now).map(item => item.id), ['regular']);
+  assert.deepEqual(core.upcoming([skipped, regular], '2026-10-14').map(item => item.id), ['regular']);
+  skipped.skipped = false;
+  assert.equal(core.remaining([skipped, regular], now).length, 2);
+});

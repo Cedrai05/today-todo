@@ -69,7 +69,7 @@
             <div class="month-control"><button id="prev-month" aria-label="이전 달">‹</button><strong id="month-label"></strong><button id="next-month" aria-label="다음 달">›</button></div>
             <div class="calendar-grid" id="calendar-grid" aria-label="월간 달력"></div>
             <div class="calendar-legend" id="task-calendar-legend"><span><i class="legend-dot"></i>할 일 있음</span><span id="selected-date-label"></span></div>
-            <div class="routine-legend hidden" id="routine-calendar-legend"><span><i class="done"></i>완료</span><span><i class="missed"></i>미완료</span><span><i class="pending"></i>오늘 대기</span><span><i class="planned"></i>예정</span></div>
+            <div class="routine-legend hidden" id="routine-calendar-legend"><span><i class="done"></i>완료</span><span><i class="missed"></i>미완료</span><span><i class="skipped"></i>건너뜀</span><span><i class="pending"></i>오늘 대기</span><span><i class="planned"></i>예정</span></div>
             <div id="routine-month-stats" class="routine-month-stats hidden"></div>
             <div id="routine-day-detail" class="routine-day-detail hidden"></div>
             <div class="calendar-divider"></div>
@@ -125,7 +125,7 @@
         <div class="field-pair"><div><label class="field-label" for="routine-start">시작 날짜</label><input class="text-field" id="routine-start" type="date" required /></div><div><label class="field-label" for="routine-end">종료 날짜 <span>선택</span></label><input class="text-field" id="routine-end" type="date" /></div></div>
         <p class="field-help">종료 날짜를 비워두면 계속 반복해요. 주 단위는 시작일이 속한 월요일 기준으로 계산해요.</p>
         <div id="routine-common-time-field"><label class="field-label" for="routine-time">수행 시각 <span>선택</span></label><input class="text-field" id="routine-time" type="time" /></div><label class="notification-toggle"><span>요일별로 시각 다르게 설정</span><input id="routine-custom-times" type="checkbox" role="switch" /></label><div id="routine-day-times" class="day-time-fields hidden"></div><button type="button" class="text-link deadline-clear" id="clear-routine-time">시간 지우기</button>
-        <label class="notification-toggle"><span>전체 보기 시간표에 표시</span><input id="routine-show-in-planner" type="checkbox" role="switch" disabled /></label><p class="field-help">수행 시각을 정하면 표시 여부를 선택할 수 있어요. 켜면 해당 시각에 체크박스·제목·시각과 카테고리 색상 선을 표시하고 할 일 완료 체크와 연결해요. 끄면 카테고리별 플랜 또는 요일별 목록에서 확인해요.</p>
+        <label class="notification-toggle"><span>전체 보기 시간표에 표시</span><input id="routine-show-in-planner" type="checkbox" role="switch" disabled /></label><p class="field-help">수행 시각을 정하면 표시 여부를 선택할 수 있어요. 켜면 해당 시각에 루틴 요약을 표시하고, 눌러서 완료 여부와 상세 내용을 확인해요. 끄면 카테고리별 플랜 또는 요일별 목록에서 확인해요.</p>
         <label class="field-label" for="routine-priority">우선순위</label><select class="text-field" id="routine-priority"><option value="normal">보통</option><option value="high">높음</option><option value="low">낮음</option></select>
         <label class="field-label" for="routine-category">카테고리</label><select id="routine-category" class="text-field"><option value="">카테고리 없음</option></select>
         <label class="field-label" for="routine-placement">전체 보기에서 표시할 위치</label><select class="text-field" id="routine-placement"><option value="auto">카테고리가 맞는 주간 플랜에 포함</option><option value="bottom">요일별 목록 맨 아래</option></select><p class="field-help">루틴 시각이 플랜 시간 안에 있고 카테고리도 같으면 플랜 안에 표시해요. 맨 아래를 선택하면 시간표 표시를 끄고 요일별 목록에만 표시해요.</p>
