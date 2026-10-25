@@ -147,3 +147,25 @@ test('invalid or occupied relocation keeps conflict policy, completed plans pres
   const check = { type: 'plan-check', planId: 'exercise', date: '2026-10-12', done: true, snapshot: plan() };
   assert.equal(core.dayModel([plan(), appointment, check], [], '2026-10-12').plans[0].startTime, '20:00');
 });
+
+test('weekly plans include their completion date and stop afterward without losing history', () => {
+  const ended = plan({ weekdays: [0, 1, 2, 3, 4, 5, 6], endDate: '2026-10-14' });
+  assert.equal(core.planInstances([ended], '2026-10-13').length, 1);
+  assert.equal(core.planInstances([ended], '2026-10-14').length, 1);
+  assert.equal(core.planInstances([ended], '2026-10-15').length, 0);
+  assert.equal(core.weekModel([ended], [], '2026-10-14').flatMap(day => day.plans).length, 4);
+  const saved = JSON.parse(JSON.stringify(ended));
+  assert.equal(core.planInstances([saved], '2026-10-15').length, 0);
+  saved.endDate = '';
+  assert.equal(core.planInstances([saved], '2026-10-15').length, 1);
+});
+
+test('changing a plan completion date preserves earlier versions and completion snapshots', () => {
+  const previous = plan({ weekdays: [1, 3], endDate: '2026-10-15' });
+  const current = plan({ weekdays: [1, 3], startDate: '2026-10-14', endDate: '2026-10-14', versions: [{ ...previous, until: '2026-10-13' }] });
+  assert.equal(core.planInstances([current], '2026-10-12').length, 1);
+  assert.equal(core.planInstances([current], '2026-10-14').length, 1);
+  assert.equal(core.planInstances([current], '2026-10-19').length, 0);
+  const check = { type: 'plan-check', planId: current.id, date: '2026-10-12', done: true, snapshot: previous };
+  assert.equal(core.planInstances([current, check], check.date)[0].done, true);
+});

@@ -56,6 +56,7 @@
   function occurrenceStatus(routine, date, tasks, today) {
     const task = occurrenceTask(tasks, routine, date);
     if (!task && !isScheduled(routine, date)) return 'off';
+    if (task?.skipped) return 'skipped';
     const done = routine.subtask ? Boolean(task?.subtasks?.find((sub) => sub.routineId === routine.id)?.done) : Boolean(task?.done);
     if (done) return 'done';
     if (date < today) return 'missed';

@@ -14,6 +14,15 @@
     });
   }
   toggle.addEventListener('change', () => { localStorage.setItem('todo-time-24', String(toggle.checked)); update(); });
+  // Normalize compact 24-hour entries before native pattern validation runs.
+  function normalizeTimeEntry(event) {
+    const input = event.target;
+    if (!input.matches('input[data-time-input="time"][type="text"]')) return;
+    const normalized = window.TodoDeadline.normalizeTime(input.value);
+    if (normalized) input.value = normalized;
+  }
+  document.addEventListener('input', normalizeTimeEntry);
+  document.addEventListener('change', normalizeTimeEntry);
   new MutationObserver(update).observe(document.body, { childList: true, subtree: true });
   update();
   const smallScreen = matchMedia('(max-width: 1199px)');

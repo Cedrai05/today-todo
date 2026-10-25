@@ -86,3 +86,24 @@ test('routine times are optional, may differ by weekday, and empty overrides sta
   assert.equal(routineTimeOn(custom,'2026-10-12'),'09:00');assert.equal(routineTimeOn(custom,'2026-10-14'),'');assert.equal(routineTimeOn(custom,'2026-10-16'),'22:15');assert.equal(custom.showInPlanner,true);assert.equal(custom.dayTimes[9],undefined);
   assert.equal(normalizeRoutine({time:'25:00',showInPlanner:true}).showInPlanner,false);
 });
+
+test('skipping a routine is distinct from completion, persists, and affects only that occurrence', () => {
+  const item = routine({ frequency: 'daily' });
+  const task = { id: 'skip', routineId: item.id, routineDate: '2026-10-12', date: '2026-10-12', done: false, skipped: true, subtasks: [{ id: 'a', done: true }, { id: 'b', done: false }] };
+  const saved = JSON.parse(JSON.stringify(task));
+  assert.equal(occurrenceStatus(item, '2026-10-12', [saved], '2026-10-14'), 'skipped');
+  assert.equal(occurrenceStatus(item, '2026-10-13', [saved], '2026-10-14'), 'missed');
+  assert.equal(occurrenceStatus(item, '2026-10-14', [saved], '2026-10-14'), 'pending');
+  assert.equal(saved.done, false);
+  assert.deepEqual(saved.subtasks, task.subtasks);
+  saved.skipped = false;
+  assert.equal(occurrenceStatus(item, '2026-10-12', [saved], '2026-10-14'), 'missed');
+});
+
+test('subtask routines and future occurrences also retain a separate skipped state', () => {
+  const item = routine({ frequency: 'daily', subtask: true });
+  const task = { routineId: item.id, date: '2026-10-15', skipped: true, subtasks: [{ routineId: item.id, done: false }] };
+  assert.equal(occurrenceStatus(item, task.date, [task], '2026-10-14'), 'skipped');
+  task.skipped = false;
+  assert.equal(occurrenceStatus(item, task.date, [task], '2026-10-14'), 'planned');
+});

@@ -237,9 +237,6 @@
   color:#7f909f;
   transform:translateY(-50%);
 }
-.week-times>span:first-child {
-  transform:none;
-}
 .week-track {
   position:relative;
   background:repeating-linear-gradient(to bottom,transparent 0,transparent 37px,#252b31 37px,#252b31 38px,transparent 38px,transparent 75px,#3a424b 75px,#3a424b 76px);
@@ -737,12 +734,6 @@ only narrow screens scroll horizontally. */
 }
 .reminder-banner .due-today {
   color:#f3c984;
-}
-.week-times>span:last-child {
-  transform:translateY(-100%);
-}
-.time-line:last-of-type {
-  transform:translateY(-1px);
 }
 .week-block-content {
   display:flow-root;

@@ -309,7 +309,7 @@
     if (view === 'completed') items = items.filter((t) => t.done);
     const query = $('#search-input').value.trim().toLocaleLowerCase('ko');
     if (query) items = items.filter((t) => t.title.toLocaleLowerCase('ko').includes(query) || t.note.toLocaleLowerCase('ko').includes(query) || t.subtasks.some((s) => s.title.toLocaleLowerCase('ko').includes(query)));
-    if (filter === 'active') items = items.filter((t) => !t.done);
+    if (filter === 'active') items = items.filter((t) => !t.done && !t.skipped);
     if (filter === 'done') items = items.filter((t) => t.done);
     const sorted = view === 'day' ? window.TodoPlannerCore.sortDailyItems(items, selectedDate) : view === 'upcoming' ? items : sortTasks(items);
     const positions = new Map(sorted.map((item, index) => [item.id, index]));
@@ -429,7 +429,7 @@
   function deleteRoutine(id) {
     const routine = routines.find((item) => item.id === id);
     if (!routine || !confirm(`“${routine.title}” 루틴을 삭제할까요? 과거 기록과 완료한 일정은 남고, 오늘 이후의 미완료 일정은 삭제돼요.`)) return;
-    tasks = tasks.filter((task) => task.routineId !== id || (task.routineDate || task.date) < iso(today) || task.done || (routine.subtask && task.subtasks.some((sub) => sub.routineId === id && sub.done)));
+    tasks = tasks.filter((task) => task.routineId !== id || (task.routineDate || task.date) < iso(today) || task.done || task.skipped || (routine.subtask && task.subtasks.some((sub) => sub.routineId === id && sub.done)));
     routines = routines.filter((item) => item.id !== id);
     if (selectedRoutineId === id) selectedRoutineId = '';
     $('#routine-dialog').close();
@@ -441,8 +441,8 @@
     generateRoutineTasks();
     window.TodoPlanner.prepare();
     const todays = tasks.filter((t) => t.date === iso(today));
-    $('#today-count').textContent = todays.filter((t) => !t.done).length + window.TodoPlanner.dayPlans(iso(today)).filter((plan) => !plan.done && !plan.blocked).length;
-    $('#all-count').textContent = tasks.filter((t) => !t.done).length;
+    $('#today-count').textContent = todays.filter((t) => !t.done && !t.skipped).length + window.TodoPlanner.dayPlans(iso(today)).filter((plan) => !plan.done && !plan.blocked).length;
+    $('#all-count').textContent = tasks.filter((t) => !t.done && !t.skipped).length;
     $('#routine-count').textContent = routines.length;
     $('#crumb-label').textContent = dateNames[view];
     $('#date-eyebrow').textContent = view === 'day' ? (selectedDate === iso(today) ? 'MY DAY' : 'YOUR DAY') : view.toUpperCase();
@@ -467,9 +467,9 @@
     $('#bulk-move').title = `${fmtDate(selectedDate)}의 일반 미완료 할 일을 옮겨요`;
     const selectedItems = view === 'all' ? tasks : view === 'completed' ? tasks.filter((t) => t.done) : view === 'upcoming' ? window.TodoDeadline.upcoming(tasks, iso(today)) : [...tasks.filter((t) => t.date === selectedDate), ...(view === 'day' ? window.TodoPlanner.dayPlans(selectedDate).filter((plan) => !plan.blocked) : [])];
     $('#progress-scope').textContent = view === 'day' ? (selectedDate === iso(today) ? '오늘의 진행률' : '이 날의 진행률') : '목록 진행률';
-    const remaining = selectedItems.filter((t) => !t.done).length;
+    const remaining = selectedItems.filter((t) => !t.done && !t.skipped).length;
     const done = selectedItems.filter((t) => t.done).length;
-    const percent = selectedItems.length ? Math.round(done / selectedItems.length * 100) : 0;
+    const percent = selectedItems.length ? Math.round(done / (selectedItems.filter((t) => !t.skipped).length || 1) * 100) : 0;
     $('#summary-open').textContent = remaining; $('#summary-done').textContent = done;
     $('#progress-label').textContent = `${percent}%`; $('#progress-bar').style.width = `${percent}%`;
     document.querySelectorAll('.nav-item').forEach((el) => {
@@ -506,8 +506,8 @@
       const status = schedule.occurrenceStatus(routine, iso(today), tasks, iso(today));
       const timeDescription = routine.dayTimes ? [1, 2, 3, 4, 5, 6, 0].filter((day) => routine.dayTimes[day]).map((day) => `${['일','월','화','수','목','금','토'][day]} ${routine.dayTimes[day]}`).join(' · ') : routine.time;
       const ended = routine.endDate && routine.endDate < iso(today);
-      const label = ended ? '기간 종료' : routine.startDate > iso(today) ? '시작 예정' : { done: '오늘 완료', pending: '오늘 할 루틴', off: '오늘은 쉬는 날' }[status] || '반복 중';
-      return `<article class="routine-card"><div class="routine-card-heading"><span class="routine-icon">↻</span><div><h3>${escapeHTML(routine.title)}</h3><p>${escapeHTML(schedule.describeRoutine(routine))}</p></div><span class="routine-state ${status === 'done' ? 'done' : ''}">${label}</span></div>${routine.note ? `<p class="routine-card-note">${escapeHTML(routine.note)}</p>` : ''}<p class="routine-period">${escapeHTML(fmtDate(routine.startDate, { year: 'numeric', month: 'short', day: 'numeric' }))} — ${routine.endDate ? escapeHTML(fmtDate(routine.endDate, { year: 'numeric', month: 'short', day: 'numeric' })) : '계속 반복'}</p>${timeDescription ? `<p class="routine-time-settings">◷ ${escapeHTML(timeDescription)} · ${routine.showInPlanner ? '시간표 표시' : '목록 표시'}</p>` : ''}<div class="routine-card-actions"><button class="secondary-button" data-action="routinecalendar" data-routine="${escapeHTML(routine.id)}">달력 기록 보기</button><button class="text-link" data-action="editroutine" data-routine="${escapeHTML(routine.id)}">수정</button><button class="text-link danger-text" data-action="deleteroutine" data-routine="${escapeHTML(routine.id)}">삭제</button></div></article>`;
+      const label = ended ? '기간 종료' : routine.startDate > iso(today) ? '시작 예정' : { skipped: '오늘 건너뜀', done: '오늘 완료', pending: '오늘 할 루틴', off: '오늘은 쉬는 날' }[status] || '반복 중';
+      return `<article class="routine-card"><div class="routine-card-heading"><span class="routine-icon">↻</span><div><h3>${escapeHTML(routine.title)}</h3><p>${escapeHTML(schedule.describeRoutine(routine))}</p></div><span class="routine-state ${status === 'done' ? 'done' : ''}">${label}</span></div>${routine.note ? `<p class="routine-card-note">${escapeHTML(routine.note)}</p>` : ''}<p class="routine-period">${escapeHTML(fmtDate(routine.startDate, { year: 'numeric', month: 'short', day: 'numeric' }))} — ${routine.endDate ? escapeHTML(fmtDate(routine.endDate, { year: 'numeric', month: 'short', day: 'numeric' })) : '계속 반복'}</p>${timeDescription ? `<p class="routine-time-settings">◷ ${escapeHTML(timeDescription)} · ${routine.showInPlanner ? '시간표 표시' : '목록 표시'}</p>` : ''}<div class="routine-card-actions">${['pending', 'missed', 'planned', 'skipped'].includes(status) ? `<button class="secondary-button" data-action="routineskip" data-routine="${escapeHTML(routine.id)}" data-occurrence="${iso(today)}">${status === 'skipped' ? '건너뛰기 취소' : '오늘 건너뛰기'}</button>` : ''}<button class="secondary-button" data-action="routinecalendar" data-routine="${escapeHTML(routine.id)}">달력 기록 보기</button><button class="text-link" data-action="editroutine" data-routine="${escapeHTML(routine.id)}">수정</button><button class="text-link danger-text" data-action="deleteroutine" data-routine="${escapeHTML(routine.id)}">삭제</button></div></article>`;
     }).join('');
   }
 
@@ -540,7 +540,7 @@
       const subtaskInput = addingSubtaskFor === task.id
         ? `<form class="subtask-entry" data-task="${task.id}"><input id="subtask-entry" maxlength="120" placeholder="하위 주제 입력…" aria-label="하위 주제 입력" autocomplete="off"><button type="submit" aria-label="하위 주제 저장">추가</button><button type="button" data-action="cancelsub" aria-label="입력 취소">취소</button></form>`
         : `<button type="button" class="subtask-add" data-action="addsub" data-id="${task.id}">＋ 하위 주제 추가</button>`;
-      return `<article data-task-id="${task.id}" class="task-card ${task.done ? 'is-done' : ''}"><button type="button" draggable="true" class="task-drag" data-drag-task="${task.id}" aria-label="할일 순서 변경">⠿</button><input type="checkbox" class="task-check" data-action="toggle" data-id="${task.id}" ${task.done ? 'checked' : ''} aria-label="${escapeHTML(task.title)} 완료"><div class="task-body"><div class="task-title-line"><button type="button" class="task-title" data-action="taskmenu" data-id="${task.id}" title="할 일 작업">${escapeHTML(task.title)}</button><div class="task-tools"><button type="button" data-action="taskmenu" data-id="${task.id}" title="할 일 작업" aria-label="할 일 작업">···</button></div></div><textarea class="inline-note" data-note-task="${task.id}" rows="1" maxlength="500" placeholder="메모 추가" aria-label="${escapeHTML(task.title)} 메모">${escapeHTML(task.note || '')}</textarea><div class="task-meta">${dateMeta}${routineMeta}${categoryMeta}${timeMeta}${priority}${deadlineMeta ? `<span class="deadline-badge ${!task.done && window.TodoDeadline.timestamp(task) < Date.now() ? 'overdue' : ''}">${escapeHTML(deadlineMeta)}</span>` : ''}${count ? `<span class="subtask-progress">▦ ${subtasksDone(task)}/${count}</span>` : ''}</div><div class="subtask-list">${subtasks}${subtaskInput}</div></div></article>`;
+      return `<article data-task-id="${task.id}" class="task-card ${task.done ? 'is-done' : ''} ${task.skipped ? 'is-skipped' : ''}"><button type="button" draggable="true" class="task-drag" data-drag-task="${task.id}" aria-label="할일 순서 변경">⠿</button><input type="checkbox" class="task-check" data-action="toggle" data-id="${task.id}" ${task.done ? 'checked' : ''} aria-label="${escapeHTML(task.title)} 완료"><div class="task-body"><div class="task-title-line"><button type="button" class="task-title" data-action="taskmenu" data-id="${task.id}" title="할 일 작업">${escapeHTML(task.title)}</button><div class="task-tools"><button type="button" data-action="taskmenu" data-id="${task.id}" title="할 일 작업" aria-label="할 일 작업">···</button></div></div><textarea class="inline-note" data-note-task="${task.id}" rows="1" maxlength="500" placeholder="메모 추가" aria-label="${escapeHTML(task.title)} 메모">${escapeHTML(task.note || '')}</textarea><div class="task-meta">${dateMeta}${routineMeta}${task.routineId ? `<button class="routine-badge" data-action="routineskip" data-routine="${escapeHTML(task.routineId)}" data-occurrence="${task.routineDate || task.date}" ${task.done ? 'disabled' : ''}>${task.skipped ? '건너뜀 · 취소' : '이번 회차 건너뛰기'}</button>` : ''}${categoryMeta}${timeMeta}${priority}${deadlineMeta ? `<span class="deadline-badge ${!task.done && window.TodoDeadline.timestamp(task) < Date.now() ? 'overdue' : ''}">${escapeHTML(deadlineMeta)}</span>` : ''}${count ? `<span class="subtask-progress">▦ ${subtasksDone(task)}/${count}</span>` : ''}</div><div class="subtask-list">${subtasks}${subtaskInput}</div></div></article>`;
     });
     const cards = [...taskCards.map((html, index) => ({ html, done: items[index].done })), ...plans.map((plan) => ({ html: window.TodoPlanner.dayPlanCard(plan, selectedDate), done: plan.done }))];
     list.innerHTML = window.TodoPlannerCore.sortCompletedLast(cards, completedLast).map((card) => card.html).join('');
@@ -553,7 +553,7 @@
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'].map((d) => `<div class="weekday">${d}</div>`).join('');
     let days = '';
     const routine = routines.find((item) => item.id === selectedRoutineId);
-    const statusNames = { done: '루틴 완료', missed: '루틴 미완료', pending: '오늘 대기', planned: '루틴 예정', off: '반복 없는 날' };
+    const statusNames = { skipped: '루틴 건너뜀', done: '루틴 완료', missed: '루틴 미완료', pending: '오늘 대기', planned: '루틴 예정', off: '반복 없는 날' };
     for (let i = 0; i < 42; i++) {
       const date = new Date(start); date.setDate(start.getDate() + i);
       const key = iso(date), outside = date.getMonth() !== month;
@@ -573,7 +573,7 @@
     $('#routine-month-stats').classList.toggle('hidden', !routine);
     $('#routine-day-detail').classList.toggle('hidden', !routine);
     if (!routine) return;
-    const stats = { done: 0, missed: 0, pending: 0, planned: 0 };
+    const stats = { done: 0, missed: 0, pending: 0, planned: 0, skipped: 0 };
     const end = new Date(shownMonth.getFullYear(), shownMonth.getMonth() + 1, 0).getDate();
     for (let day = 1; day <= end; day++) {
       const key = iso(new Date(shownMonth.getFullYear(), shownMonth.getMonth(), day));
@@ -581,16 +581,16 @@
       if (status !== 'off') stats[status]++;
     }
     const elapsed = stats.done + stats.missed;
-    $('#routine-month-stats').innerHTML = `<div><b>${stats.done}</b><span>완료</span></div><div><b>${stats.missed}</b><span>미완료</span></div><div><b>${elapsed ? Math.round(stats.done / elapsed * 100) : 0}%</b><span>수행률</span></div><p>선택한 달의 기록 · 오늘 대기와 예정일 제외</p>`;
+    $('#routine-month-stats').innerHTML = `<div><b>${stats.done}</b><span>완료</span></div><div><b>${stats.missed}</b><span>미완료</span></div><div><b>${stats.skipped}</b><span>건너뜀</span></div><div><b>${elapsed ? Math.round(stats.done / elapsed * 100) : 0}%</b><span>수행률</span></div><p>선택한 달의 기록 · 오늘 대기·예정일·건너뜀은 수행률에서 제외</p>`;
     const status = schedule.occurrenceStatus(routine, selectedDate, tasks, iso(today));
-    const labels = { done: '완료했어요', missed: '수행하지 못했어요', pending: '오늘의 루틴이 기다려요', planned: '예정된 루틴이에요', off: '루틴을 쉬는 날이에요' };
-    $('#routine-day-detail').innerHTML = `<span class="routine-detail-date">${escapeHTML(fmtDate(selectedDate))}</span><strong>${escapeHTML(routine.title)}</strong><p class="status-${status}">${labels[status]}</p>${status !== 'off' && selectedDate <= iso(today) ? `<button class="secondary-button" data-action="routinetoggle" data-routine="${escapeHTML(routine.id)}" data-occurrence="${selectedDate}">${status === 'done' ? '완료 취소하기' : '완료로 기록하기'}</button>` : ''}`;
+    const labels = { skipped: '이번 회차는 건너뛰었어요', done: '완료했어요', missed: '수행하지 못했어요', pending: '오늘의 루틴이 기다려요', planned: '예정된 루틴이에요', off: '루틴을 쉬는 날이에요' };
+    $('#routine-day-detail').innerHTML = `<span class="routine-detail-date">${escapeHTML(fmtDate(selectedDate))}</span><strong>${escapeHTML(routine.title)}</strong><p class="status-${status}">${labels[status]}</p>${status !== 'off' && selectedDate <= iso(today) ? `<button class="secondary-button" data-action="routinetoggle" data-routine="${escapeHTML(routine.id)}" data-occurrence="${selectedDate}">${status === 'done' ? '완료 취소하기' : '완료로 기록하기'}</button>` : ''}${status !== 'off' && status !== 'done' ? `<button class="secondary-button" data-action="routineskip" data-routine="${escapeHTML(routine.id)}" data-occurrence="${selectedDate}">${status === 'skipped' ? '건너뛰기 취소' : '이번 회차 건너뛰기'}</button>` : ''}`;
   }
 
   function renderAgenda() {
-    const items = window.TodoPlannerCore.sortCompletedLast(sortTasks(tasks.filter((t) => t.date === selectedDate && (!selectedRoutineId || selectedRoutineId === '__plans' || selectedRoutineId.startsWith('plan:') || t.routineId === selectedRoutineId))), completedLast);
+    const items = window.TodoPlannerCore.sortCompletedLast(sortTasks(tasks.filter((t) => !t.skipped && t.date === selectedDate && (!selectedRoutineId || selectedRoutineId === '__plans' || selectedRoutineId.startsWith('plan:') || t.routineId === selectedRoutineId))), completedLast);
     $('#agenda-title').textContent = selectedDate === iso(today) ? '오늘의 일정' : fmtDate(selectedDate, { month: 'long', day: 'numeric' });
-    $('#agenda-count').textContent = items.length ? `${items.filter((t) => !t.done).length}개 남음` : '할 일이 없어요';
+    $('#agenda-count').textContent = items.length ? `${items.filter((t) => !t.done && !t.skipped).length}개 남음` : '할 일이 없어요';
     $('#agenda-list').innerHTML = items.slice(0, 5).map((task) => `<div class="agenda-item ${task.done ? 'done' : ''}"><button class="agenda-check ${task.done ? 'done' : ''}" data-action="toggle" data-id="${task.id}" aria-label="${escapeHTML(task.title)} 완료">${task.done ? '✓' : ''}</button><button type="button" class="agenda-title" data-action="taskmenu" data-id="${task.id}" title="할 일 작업">${escapeHTML(task.title)}</button></div>`).join('');
   }
 
@@ -667,12 +667,26 @@
           $('#calendar-routine').focus();
           $('.calendar-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           break;
+        case 'routineskip': {
+          const routine = routines.find((item) => item.id === target.dataset.routine);
+          const date = target.dataset.occurrence;
+          if (!routine || !schedule.validDate(date) || schedule.occurrenceStatus(routine, date, tasks, iso(today)) === 'off') break;
+          let occurrence = schedule.occurrenceTask(tasks, routine, date);
+          if (!occurrence) { occurrence = buildRoutineTask(routine, date); tasks.push(occurrence); if (!routine.occurrences.includes(date)) routine.occurrences.push(date); }
+          const status = schedule.occurrenceStatus(routine, date, tasks, iso(today));
+          if (status === 'done') break;
+          occurrence.skipped = !occurrence.skipped;
+          persist(occurrence);
+          toast(occurrence.skipped ? '이번 회차를 건너뛰었어요.' : '건너뛰기를 취소했어요.');
+          break;
+        }
         case 'routinetoggle': {
           const routine = routines.find((item) => item.id === target.dataset.routine);
           const date = target.dataset.occurrence;
           if (!routine || date > iso(today) || schedule.occurrenceStatus(routine, date, tasks, iso(today)) === 'off') break;
           let occurrence = schedule.occurrenceTask(tasks, routine, date);
           if (!occurrence) { occurrence = buildRoutineTask(routine, date); tasks.push(occurrence); if (!routine.occurrences.includes(date)) routine.occurrences.push(date); }
+          occurrence.skipped = false;
           if (routine.subtask) {
             let sub = occurrence.subtasks.find((item) => item.routineId === routine.id);
             if (!sub) { sub = { id: uid(), title: routine.title, done: false, routineId: routine.id }; occurrence.subtasks.push(sub); }
@@ -685,7 +699,12 @@
         case 'edit': if (task) openDialog(task); break;
         case 'taskmenu': if (task) openTaskActions(task); break;
         case 'subtaskmenu': if (task) openTaskActions(task, task.subtasks.find((sub) => sub.id === target.dataset.sub)); break;
-        case 'toggle': if (task) { task.done = !task.done; task.subtasks.forEach((sub) => { sub.done = task.done; }); persist(task); } break;
+        case 'subtoggle': {
+          const sub = task?.subtasks.find((item) => item.id === target.dataset.sub);
+          if (sub) { task.skipped = false; sub.done = target.checked; task.done = task.subtasks.every((item) => item.done); persist(task); }
+          break;
+        }
+        case 'toggle': if (task) { task.skipped = false; task.done = !task.done; task.subtasks.forEach((sub) => { sub.done = task.done; }); persist(task); } break;
         case 'addsub': if (task) { addingSubtaskFor = task.id; renderTaskList(); $('#subtask-entry')?.focus(); } break;
         case 'cancelsub': addingSubtaskFor = null; renderTaskList(); break;
         case 'canceleditsub': editingSubtaskId = null; renderTaskList(); break;
@@ -765,7 +784,7 @@
     const now = Date.now();
     const routine = schedule.normalizeRoutine({ ...existing, id: existing?.id || uid(), type: 'routine', title, note: $('#routine-note').value.trim(), categoryId: $('#routine-category').value, priority: $('#routine-priority').value, placement: $('#routine-placement').value, time, dayTimes, showInPlanner: $('#routine-show-in-planner').checked, frequency, interval: Number($('#routine-interval').value), monthDay: Number($('#routine-monthday').value), startDate, endDate, weekdays, subtask: existing?.subtask || Boolean(sub), parentTitle: existing?.parentTitle || task?.title || title, occurrences: existing?.occurrences || [], createdAt: existing?.createdAt || now, updatedAt: now });
     if (existing) {
-      tasks = tasks.filter((item) => item.routineId !== existing.id || (item.routineDate || item.date) < iso(today) || item.done || (routine.subtask && item.subtasks.some((child) => child.routineId === routine.id && child.done)));
+      tasks = tasks.filter((item) => item.routineId !== existing.id || (item.routineDate || item.date) < iso(today) || item.done || item.skipped || (routine.subtask && item.subtasks.some((child) => child.routineId === routine.id && child.done)));
       routine.occurrences = [...new Set([...existing.occurrences.filter((date) => date < iso(today)), ...tasks.filter((item) => item.routineId === routine.id).map((item) => item.routineDate || item.date)])];
       routine.scheduleChangedOn = iso(today);
       routine.historyDates = [...new Set([...(existing.historyDates || []), ...routine.occurrences.filter((date) => date < iso(today))])];
@@ -810,17 +829,6 @@
     task.subtasks.push({ id: uid(), title, done: false });
     persist(task);
     $('#subtask-entry')?.focus();
-  });
-  document.addEventListener('change', (event) => {
-    const input = event.target;
-    if (input.dataset.action === 'subtoggle') {
-      const task = tasks.find((t) => t.id === input.dataset.task);
-      const sub = task?.subtasks.find((s) => s.id === input.dataset.sub);
-      if (sub) {
-        sub.done = input.checked; task.done = task.subtasks.length > 0 && task.subtasks.every((item) => item.done);
-        persist(task);
-      }
-    }
   });
   document.querySelectorAll('.nav-item').forEach((button) => button.addEventListener('click', () => { view = button.dataset.view; filter = 'all'; document.querySelectorAll('.filter-tab').forEach((t) => t.classList.toggle('selected', t.dataset.filter === 'all')); render(); }));
   document.querySelectorAll('.filter-tab').forEach((button) => button.addEventListener('click', () => { filter = button.dataset.filter; document.querySelectorAll('.filter-tab').forEach((t) => t.classList.toggle('selected', t === button)); renderTaskList(); }));
@@ -977,7 +985,7 @@
   updateAccountUI();
   restoreAuthCallback();
   restoreSession();
-  window.TodoChatGPT.init({ getRemaining: () => sortTasks(tasks.filter((task) => task.date === iso(today) && !task.done)) });
+  window.TodoChatGPT.init({ getRemaining: () => sortTasks(tasks.filter((task) => task.date === iso(today) && !task.done && !task.skipped)) });
   window.TodoReminders.init({
     getRemaining: () => window.TodoDeadline.remaining(tasks),
     showToday,

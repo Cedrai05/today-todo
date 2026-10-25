@@ -23,10 +23,10 @@
     return `마감 ${text}${task.done ? '' : timestamp(task) < now.getTime() ? ' · 기한 지남' : dueToday(task, now) ? ' · 오늘 마감' : ''}`;
   }
   function upcoming(tasks, today) {
-    return tasks.filter((task) => !task.done && (task.date > today || Number.isFinite(timestamp(task)))).sort((a, b) => timestamp(a) - timestamp(b) || a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
+    return tasks.filter((task) => !task.done && !task.skipped && (task.date > today || Number.isFinite(timestamp(task)))).sort((a, b) => timestamp(a) - timestamp(b) || a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
   }
   function remaining(tasks, now = new Date()) {
-    return tasks.filter((task) => !task.done && (task.date === dateKey(now) || dueToday(task, now))).sort((a, b) => Number(dueToday(b, now)) - Number(dueToday(a, now)) || timestamp(a) - timestamp(b) || a.createdAt - b.createdAt);
+    return tasks.filter((task) => !task.done && !task.skipped && (task.date === dateKey(now) || dueToday(task, now))).sort((a, b) => Number(dueToday(b, now)) - Number(dueToday(a, now)) || timestamp(a) - timestamp(b) || a.createdAt - b.createdAt);
   }
   return { timestamp, dueToday, normalizeTime, inputValue, describe, upcoming, remaining };
 });
