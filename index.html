@@ -146,7 +146,7 @@
         <div class="dialog-actions"><button type="button" class="secondary-button" id="test-notification">테스트 알림</button><span class="action-spacer"></span><button class="primary-button">저장하기</button></div>
       </form>
     </dialog>
-    <dialog id="bulk-dialog" class="task-dialog"><form id="bulk-form"><div class="dialog-head"><div><div class="eyebrow">MOVE TASKS</div><h2>미완료 할 일 이동</h2></div><button type="button" class="icon-button" onclick="this.closest('dialog').close()" aria-label="닫기">×</button></div><p class="field-help"><span id="bulk-source"></span>의 일반 할일을 옮겨요. 루틴과 플랜에 연결된 할일은 제외해요.</p><label class="field-label" for="bulk-move-date">이동할 날짜</label><input class="text-field" id="bulk-move-date" type="date" required><div class="dialog-actions"><button type="button" class="secondary-button" onclick="this.closest('dialog').close()">취소</button><button class="primary-button">옮기기</button></div></form></dialog>
+    <dialog id="bulk-dialog" class="task-dialog"><form id="bulk-form"><div class="dialog-head"><div><div class="eyebrow">MOVE TASKS</div><h2>미완료 할 일 이동</h2></div><button type="button" class="icon-button" onclick="this.closest('dialog').close()" aria-label="닫기">×</button></div><p class="field-help"><span id="bulk-source"></span>의 일반 할일을 옮겨요. 완료한 하위 항목은 원래 날짜에 남기고, 미완료 하위 항목만 같은 제목의 새 할일로 나눠 옮겨요. 루틴과 플랜에 연결된 할일은 제외해요.</p><label class="field-label" for="bulk-move-date">이동할 날짜</label><input class="text-field" id="bulk-move-date" type="date" required><div class="dialog-actions"><button type="button" class="secondary-button" onclick="this.closest('dialog').close()">취소</button><button class="primary-button">옮기기</button></div></form></dialog>
     <dialog id="settings-dialog" class="task-dialog">
       <div class="dialog-head"><div><div class="eyebrow">PREFERENCES</div><h2>설정</h2></div><button type="button" class="icon-button" id="close-settings" aria-label="닫기">×</button></div>
       <label class="notification-toggle"><span>완료한 할 일 맨 아래로 보내기</span><input id="completed-tasks-last" type="checkbox" role="switch" aria-describedby="completed-tasks-last-help" checked></label>
@@ -183,6 +183,7 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="sync-config.js"></script>
     <script src="routine-core.js"></script>
+    <script src="task-core.js"></script>
     <script src="deadline-core.js"></script>
     <script src="planner-core.js"></script>
     <script src="planner.js"></script>

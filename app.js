@@ -955,9 +955,9 @@
     event.preventDefault();
     const date = $('#bulk-move-date').value;
     if (!schedule.validDate(date)) return;
-    const items = tasks.filter((item) => item.date === $('#bulk-dialog').dataset.source && !item.done && !item.routineId && !item.planId && !item.subtasks?.some((sub) => sub.routineId));
-    items.forEach((item) => { item.date = date; item.updatedAt = Date.now(); });
-    $('#bulk-dialog').close(); persist(); toast(`${items.length}개의 할 일을 옮겼어요.`);
+    const result = window.TodoTasks.moveIncomplete(tasks, $('#bulk-dialog').dataset.source, date, { createId: uid });
+    tasks = result.tasks;
+    $('#bulk-dialog').close(); persist(); toast(`${result.movedCount}개의 할 일을 옮겼어요.`);
   });
   $('#follow-task-date').checked = followDate();
   $('#follow-task-date').addEventListener('change', (event) => localStorage.setItem('todo-follow-date', String(event.target.checked)));
